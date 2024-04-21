@@ -6,7 +6,9 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.arima.model import ARIMA
 import plotly.graph_objs as go
-
+from sklearn.preprocessing import MinMaxScaler
+# from keras.models import Sequential
+# from keras.layers import LSTM, Dense
 
 # Define product IDs and their corresponding names for the dropdown display
 product_ids = [1, 2, 6]
@@ -63,7 +65,8 @@ app = dash.Dash(__name__, external_stylesheets=["./assets/style.css"])
 #     dcc.Graph(id='arima-forecast-plot')
 # ])
 
-app.layout = html.Div([
+app.layout = html.Div(
+    [
     html.H1("Fuel Price Analysis", style={
         'text-align': 'center',
         'margin-top': '20px',
@@ -218,10 +221,26 @@ app.layout = html.Div([
                 'cursor': 'pointer'
             }
         ),
+#         html.Button(
+#     'Generate LSTM Forecast', id='lstm-button', n_clicks=0,
+#     style={
+#         'width': '200px',
+#         'height': '40px',
+#         'margin': '10px',
+#         'background-color': '#FFA07A',  # Choose a color that matches your theme
+#         'color': 'white',
+#         'border': 'none',
+#         'border-radius': '5px',
+#         'cursor': 'pointer'
+#     }
+# )
+
     ], style={'text-align': 'center'}),
     
     dcc.Loading(id="loading-sarima", children=[dcc.Graph(id='sarima-forecast-plot')], type="default", style={'margin-top': '20px'} ),
     dcc.Loading(id="loading-arima", children=[dcc.Graph(id='arima-forecast-plot')], type="default", style={'margin-top': '20px'} ),
+    # dcc.Loading(id="loading-lstm", children=[dcc.Graph(id='lstm-forecast-plot')], type="default", style={'margin-top': '20px'} ),
+
 ], style={
     'padding': '50px',
     'background-color': '#e9f4ff',  # A lighter blue theme for the overall background
@@ -379,6 +398,51 @@ def update_arima_forecast_plot(n_clicks, product_id, n_weeks):
         return fig
     else:
         return {}
+
+
+@app.callback(
+    Output('lstm-forecast-plot', 'figure'),
+    [Input('lstm-button', 'n_clicks')],
+    [State('product-dropdown', 'value'), State('forecast-weeks', 'value')]
+)
+def update_lstm_forecast_plot(product_id, n_weeks, cleaned_data):
+    product_data = cleaned_data[cleaned_data['PRODUCT_ID'] == product_id]['PRICE']
+    
+    scaler = MinMaxScaler()
+    product_data_scaled = scaler.fit_transform(product_data.values.reshape(-1, 1))
+    
+    window_size = 52
+    X_train, y_train = [], []
+    for i in range(window_size, len(product_data_scaled)):
+        X_train.append(product_data_scaled[i-window_size:i, 0])
+        y_train.append(product_data_scaled[i, 0])
+    X_train, y_train = np.array(X_train), np.array(y_train)
+    X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+    
+    model = Sequential()
+    model.add(LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], 1)))
+    model.add(LSTM(units=50))
+    model.add(Dense(units=1))
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    model.fit(X_train, y_train, epochs=100, batch_size=32)
+    
+    forecast = []
+    inputs = product_data_scaled[-window_size:]
+    for i in range(n_weeks):
+        inputs = np.reshape(inputs, (1, window_size, 1))
+        predicted_price = model.predict(inputs)
+        forecast.append(predicted_price[0, 0])
+        inputs = np.append(inputs[:, 1:, :], [[predicted_price[0, 0]]], axis=1)
+    
+    forecast = scaler.inverse_transform(np.array(forecast).reshape(-1, 1)).flatten()
+    forecast_index = pd.date_range(product_data.index[-1] + pd.Timedelta(weeks=1), periods=n_weeks, freq='W-MON')
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=product_data.index, y=product_data, mode='lines', name='Historical'))
+    fig.add_trace(go.Scatter(x=forecast_index, y=forecast, mode='lines', name='LSTM Forecast'))
+    fig.update_layout(title='LSTM Forecast', xaxis_title='Date', yaxis_title='Price', showlegend=True)
+    
+    return fig
 
 # Run the Dash app
 if __name__ == '__main__':
