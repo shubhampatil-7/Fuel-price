@@ -1,6 +1,6 @@
 import dash
 from dash import dcc, html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import pandas as pd
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.seasonal import seasonal_decompose
@@ -64,54 +64,173 @@ app = dash.Dash(__name__, external_stylesheets=["./assets/style.css"])
 # ])
 
 app.layout = html.Div([
-    html.H1("Fuel Price Analysis", style={'text-align': 'center', 'margin-top': '20px'}),
+    html.H1("Fuel Price Analysis", style={
+        'text-align': 'center',
+        'margin-top': '20px',
+        'color': '#2176FF',  # Changed to blue to match the theme
+        'padding': '10px',
+        'font-size': '3em',  # Larger font size for the heading
+    }),
     
     dcc.Dropdown(
         id='product-dropdown',
         options=[{'label': id_to_name[pid], 'value': pid} for pid in product_ids],
-        value=product_ids[0],  # Default selected product
+        value=product_ids[0],
         clearable=False,
-        style={'width': '50%', 'margin': '20px auto'}
+        style={
+            'width': '50%',
+            'margin': '20px auto',
+            'color': '#084298',
+            'border-radius': '5px',
+            
+        }
     ),
     
-    dcc.Graph(id='price-graph', style={'padding': '20px'}),
-    dcc.Graph(id='seasonal-decomposition-graph', style={'padding': '20px'}),
+    dcc.Graph(
+        id='price-graph',
+        style={'padding': '20px'},
+        config={
+            'displayModeBar': False  # Hides the mode bar
+        }
+    ),
+    
+    html.Div([
+        html.Button('Show All', id='button-all', n_clicks=0, className='button-all', style={
+            "margin": "3px", 
+            "border-radius": "12px", 
+            "background-color": "#007BFF", 
+            "border": "none",
+            "color": "white",
+            "padding": "10px 20px",
+            "text-align": "center",
+            "text-decoration": "none",
+            "display": "inline-block",
+            "font-size": "16px",
+            "margin": "4px 2px",
+            "cursor": "pointer"
+        }),
+        html.Button('Show Trend', id='button-trend', n_clicks=0, className='button-trend', style={
+            "margin": "3px", 
+            "border-radius": "12px", 
+            "background-color": "#17A2B8", 
+            "border": "none",
+            "color": "white",
+            "padding": "10px 20px",
+            "text-align": "center",
+            "text-decoration": "none",
+            "display": "inline-block",
+            "font-size": "16px",
+            "margin": "4px 2px",
+            "cursor": "pointer"
+        }),
+        html.Button('Show Seasonal', id='button-seasonal', n_clicks=0, className='button-seasonal', style={
+            "margin": "3px", 
+            "border-radius": "12px", 
+            "background-color": "#DC3545", 
+            "border": "none",
+            "color": "white",
+            "padding": "10px 20px",
+            "text-align": "center",
+            "text-decoration": "none",
+            "display": "inline-block",
+            "font-size": "16px",
+            "margin": "4px 2px",
+            "cursor": "pointer"
+        }),
+        html.Button('Show Residual', id='button-residual', n_clicks=0, className='button-residual', style={
+            "margin": "3px", 
+            "border-radius": "12px", 
+            "background-color": "#28A745",
+            "border": "none",
+            "color": "white",
+            "padding": "10px 20px",
+            "text-align": "center",
+            "text-decoration": "none",
+            "display": "inline-block",
+            "font-size": "16px",
+            "margin": "4px 2px",
+            "cursor": "pointer"
+        }),
+    ], style={'text-align': 'center'}),
+
+    dcc.Loading(
+        id="loading-seasonal",
+        children=[
+             dcc.Graph(
+                id='seasonal-decomposition-graph',
+                style={'padding': '20px'},
+                config={
+                    'displayModeBar': False  # Hides the mode bar
+                }
+            ),
+            # dcc.Graph(id='trend-graph', style={'display': 'inline-block', 'width': '33%'}),
+            # dcc.Graph(id='seasonal-graph', style={'display': 'inline-block', 'width': '33%'}),
+            # dcc.Graph(id='residual-graph', style={'display': 'inline-block', 'width': '33%'}),
+        ],
+        type="default"
+    ),
+
+    
     
     html.Div([
         dcc.Input(
             id='forecast-weeks',
             type='number',
             placeholder='Enter Weeks Ahead',
-            style={'width': '200px', 'margin': '10px', 'border-radius':"3px"}
+            style={
+                "height": "60px",
+                'width': '200px',
+                'margin': '10px auto',
+                'border-radius': "5px",
+                'border': '1px solid #2176FF',
+                'box-shadow': '2px 2px 10px 0 rgba(33, 118, 255, 0.2)',
+                'text-align': 'center'
+            }
         ),
-        # html.Button('Generate SARIMA Forecast', id='sarima-button', n_clicks=0,style={'width': '200px', 'margin': '10px'}),
-        # html.Button('Generate ARIMA Forecast', id='arima-button', n_clicks=0, style={'width': '200px', 'margin': '10px'}),
     ], style={'text-align': 'center'}),
 
     html.Div([
-        html.Button('Generate SARIMA Forecast', id='sarima-button', n_clicks=0,style={'width': '200px', 'margin': '10px'}),
-        html.Button('Generate ARIMA Forecast', id='arima-button', n_clicks=0, style={'width': '200px', 'margin': '10px'}),
+        html.Button(
+            'Generate SARIMA Forecast', id='sarima-button', n_clicks=0,
+            style={
+                'width': '200px',
+                'height': '40px',
+                'margin': '10px',
+                'background-color': '#28A745',
+                'color': 'white',
+                'border': 'none',
+                'border-radius': '5px',
+                'box-shadow': '2px 2px 10px 0 rgba(40, 167, 69, 0.2)',
+                'cursor': 'pointer'
+            }
+        ),
+        html.Button(
+            'Generate ARIMA Forecast', id='arima-button', n_clicks=0,
+            style={
+                'width': '200px',
+                'height': '40px',
+                'margin': '10px',
+                'background-color': '#DC3545',
+                'color': 'white',
+                'border': 'none',
+                'border-radius': '5px',
+                'box-shadow': '2px 2px 10px 0 rgba(220, 53, 69, 0.2)',
+                'cursor': 'pointer'
+            }
+        ),
     ], style={'text-align': 'center'}),
     
-    
-    # Loading component for ARIMA forecast plot
-    dcc.Loading(
-        id="loading-sarima",
-        children=[dcc.Graph(id='sarima-forecast-plot')],
-        type="default",
-    ),
-
-    dcc.Loading(
-        id="loading-arima",
-        children=[dcc.Graph(id='arima-forecast-plot')],
-        type="default",
-    ),
-
-    # dcc.Graph(id='arima-forecast-plot')
-], style={'padding': '50px', 'background-color': '#f5f5f5'})
+    dcc.Loading(id="loading-sarima", children=[dcc.Graph(id='sarima-forecast-plot')], type="default", style={'margin-top': '20px'} ),
+    dcc.Loading(id="loading-arima", children=[dcc.Graph(id='arima-forecast-plot')], type="default", style={'margin-top': '20px'} ),
+], style={
+    'padding': '50px',
+    'background-color': '#e9f4ff',  # A lighter blue theme for the overall background
+    'font-family': 'Arial, sans-serif'
+})
 
 # Define callback to update price graph based on product selection
 @app.callback(
+        
     Output('price-graph', 'figure'),
     [Input('product-dropdown', 'value')]
 )
@@ -120,34 +239,104 @@ def update_price_graph(selected_product_id):
     filtered_data = cleaned_data[cleaned_data['PRODUCT_ID'] == selected_product_id]
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=filtered_data.index, y=filtered_data['PRICE'], mode='lines', name='Price'))
-    fig.update_layout(title='Fuel Price Trends', xaxis_title='Date', yaxis_title='Price')
+    
+    # fig.update_layout(title='Fuel Price Trends', xaxis_title='Date', yaxis_title='Price')
+    # Inside your update_price_graph function
+    fig.update_layout(
+        title='Fuel Price Trends',
+        xaxis_title='Date',
+        yaxis_title='Price',
+        plot_bgcolor='#e9f4ff',  # Graph's plot background color
+        paper_bgcolor='#e9f4ff',  # Graph's surrounding paper area background color
+    )
+
     return fig
 
 # Define callback to update seasonal decomposition graph based on product selection
+# @app.callback(
+#     Output('seasonal-decomposition-graph', 'figure'),
+#     [Input('product-dropdown', 'value')]
+# )
+
+# @app.callback(
+#     Output('seasonal-decomposition-graph', 'figure'),
+#     [Input('button-trend', 'n_clicks'),
+#      Input('button-seasonal', 'n_clicks'),
+#      Input('button-residual', 'n_clicks'),
+#      Input('product-dropdown', 'value')],
+#     [State('seasonal-decomposition-graph', 'figure')]
+# )
+# def update_seasonal_decomposition_graph(selected_product_id):
+#     """Update seasonal decomposition graph based on selected product ID."""
+#     product_data = cleaned_data[cleaned_data['PRODUCT_ID'] == selected_product_id]['PRICE']
+#     decomposition = seasonal_decompose(product_data, model='additive', period=52)
+#     trend = decomposition.trend
+#     seasonal = decomposition.seasonal
+#     residual = decomposition.resid
+#     fig = go.Figure()
+#     fig.add_trace(go.Scatter(x=product_data.index, y=trend, mode='lines', name='Trend'))
+#     fig.add_trace(go.Scatter(x=product_data.index, y=seasonal, mode='lines', name='Seasonal'))
+#     fig.add_trace(go.Scatter(x=product_data.index, y=residual, mode='lines', name='Residual'))
+#     fig.update_layout(
+#         title=f"Seasonal Decomposition (Product ID {selected_product_id})",
+#         xaxis_title="Date",
+#         yaxis_title="Price",
+#         showlegend=True,
+#         height=600,
+#         width=1000,
+#         plot_bgcolor='#e9f4ff',
+#         paper_bgcolor='#e9f4ff',
+#     )
+#     return fig
+
 @app.callback(
     Output('seasonal-decomposition-graph', 'figure'),
-    [Input('product-dropdown', 'value')]
+    [Input('button-all', 'n_clicks'),
+     Input('button-trend', 'n_clicks'),
+     Input('button-seasonal', 'n_clicks'),
+     Input('button-residual', 'n_clicks'),
+     Input('product-dropdown', 'value')]
 )
-def update_seasonal_decomposition_graph(selected_product_id):
-    """Update seasonal decomposition graph based on selected product ID."""
+def update_graph(btn_all, btn_trend, btn_seasonal, btn_residual, selected_product_id):
+
+    colors = {
+        'button-all': '#2176FF', # Blue
+        'button-trend': "#17A2B8", # Green
+        'button-seasonal': "#DC3545", # Red
+        'button-residual': "#28A745", # Cyan
+    }
+    ctx = dash.callback_context
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0] if ctx.triggered else 'button-all'
+
     product_data = cleaned_data[cleaned_data['PRODUCT_ID'] == selected_product_id]['PRICE']
     decomposition = seasonal_decompose(product_data, model='additive', period=52)
-    trend = decomposition.trend
-    seasonal = decomposition.seasonal
-    residual = decomposition.resid
+    trend = decomposition.trend.dropna()
+    seasonal = decomposition.seasonal.dropna()
+    residual = decomposition.resid.dropna()
+
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=product_data.index, y=trend, mode='lines', name='Trend'))
-    fig.add_trace(go.Scatter(x=product_data.index, y=seasonal, mode='lines', name='Seasonal'))
-    fig.add_trace(go.Scatter(x=product_data.index, y=residual, mode='lines', name='Residual'))
+
+    if button_id == 'button-trend':
+        fig.add_trace(go.Scatter(x=trend.index, y=trend, mode='lines', name='Trend', line=dict(color=colors[button_id])))
+    elif button_id == 'button-seasonal':
+        fig.add_trace(go.Scatter(x=seasonal.index, y=seasonal, mode='lines', name='Seasonal', line=dict(color=colors[button_id])))
+    elif button_id == 'button-residual':
+        fig.add_trace(go.Scatter(x=residual.index, y=residual, mode='lines', name='Residual', line=dict(color=colors[button_id])))
+    elif button_id == 'button-all':
+        fig.add_trace(go.Scatter(x=trend.index, y=trend, mode='lines', name='Trend'))
+        fig.add_trace(go.Scatter(x=seasonal.index, y=seasonal, mode='lines', name='Seasonal'))
+        fig.add_trace(go.Scatter(x=residual.index, y=residual, mode='lines', name='Residual'))
+
     fig.update_layout(
         title=f"Seasonal Decomposition (Product ID {selected_product_id})",
         xaxis_title="Date",
         yaxis_title="Price",
         showlegend=True,
-        height=600,
-        width=1000
+        height=600
     )
+
     return fig
+
 
 # Define callback to update SARIMA forecast plot based on user inputs
 @app.callback(
