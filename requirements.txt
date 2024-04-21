@@ -5,3 +5,4 @@ statsmodels>=0.13.0
 gunicorn>=20.1.0
 numpy>=1.19.5
 tensorflow>=2.3.0  # Adjust version as needed for compatibility
+scikit-learn>=0.24.1
