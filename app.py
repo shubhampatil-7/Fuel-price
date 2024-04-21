@@ -44,6 +44,7 @@ cleaned_data = filter_and_clean_data(data, product_ids)
 
 # Initialize Dash app
 app = dash.Dash(__name__, external_stylesheets=["./assets/style.css"])
+server = app.server 
 
 # Define app layout
 # app.layout = html.Div([
